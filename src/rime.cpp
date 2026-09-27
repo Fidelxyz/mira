@@ -57,13 +57,13 @@ Rime::deploy()
         api->join_maintenance_thread();
 }
 
-std::optional<Session>
+std::unique_ptr<Session>
 Rime::create_session()
 {
     RimeSessionId session = api->create_session();
     if (!session)
-        return std::nullopt;
-    return std::optional<Session>(std::in_place, session);
+        return nullptr;
+    return std::make_unique<Session>(session);
 }
 
 const fs::path&
@@ -98,11 +98,25 @@ Session::set_option(const std::string& k, bool v)
 std::optional<Result>
 Session::send_keys(const std::string &keys)
 {
-    if (!api->simulate_key_sequence(session, keys.c_str())) {
-        std::cerr << "cannot simulate key sequence '" << keys << "'\n";
+    if (!send_key_sequence(keys)) {
         return std::nullopt;
     }
+    return read_result(/* include_candidates */ true);
+}
 
+bool
+Session::send_key_sequence(const std::string& keys)
+{
+    if (!api->simulate_key_sequence(session, keys.c_str())) {
+        std::cerr << "cannot simulate key sequence '" << keys << "'\n";
+        return false;
+    }
+    return true;
+}
+
+Result
+Session::read_result(bool include_candidates)
+{
     Result result;
 
     // Get committed
@@ -115,16 +129,18 @@ Session::send_keys(const std::string &keys)
     }
 
     // Get candidates
-    RimeCandidateListIterator it = {0};
-    if (api->candidate_list_begin(session, &it)) {
-        for (int cnt = 0; cnt < 100 && api->candidate_list_next(&it); ++cnt) {
-            Candidate cand;
-            cand.text = it.candidate.text;
-            if (it.candidate.comment)
-                cand.comment = it.candidate.comment;
-            result.candidates.push_back(cand);
+    if (include_candidates) {
+        RimeCandidateListIterator it = {0};
+        if (api->candidate_list_begin(session, &it)) {
+            for (int cnt = 0; cnt < 100 && api->candidate_list_next(&it); ++cnt) {
+                Candidate cand;
+                cand.text = it.candidate.text;
+                if (it.candidate.comment)
+                    cand.comment = it.candidate.comment;
+                result.candidates.push_back(cand);
+            }
+            api->candidate_list_end(&it);
         }
-        api->candidate_list_end(&it);
     }
 
     // Get preedit
