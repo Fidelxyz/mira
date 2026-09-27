@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <rime_api.h>
 #include <vector>
 #include <optional>
@@ -31,7 +32,7 @@ public:
     ~Rime();
 
     void deploy();
-    std::optional<Session> create_session();
+    std::unique_ptr<Session> create_session();
 
     const std::filesystem::path& get_working_dir() const;
 
@@ -50,6 +51,8 @@ public:
 
     bool select_schema(const std::string& schema_id);
     void set_option(const std::string& key, bool value);
+    bool send_key_sequence(const std::string& key_sequence);
+    Result read_result(bool include_candidates);
     std::optional<Result> send_keys(const std::string &key_sequence);
 
 private:

@@ -8,6 +8,10 @@ Mira 之名來自 mirror，義爲「鏡」，而「鏡」則截取自《韻鏡�
 
 首先編寫方案的測試文件，如 [luna_pinyin.test.yaml](https://github.com/rimeinn/mira/blob/master/examples/luna_pinyin.test.yaml)。測試文件格式爲 YAML（對 Rime 用戶來說應該不陌生）。
 
+Mira 依文件名後綴選擇工作方式：
+- `*.test.yaml` 運行功能測試，
+- `*.benchmark.yaml` 運行效能測量。
+
 然後在該文件上運行 `mira` 程序即可：
 
 ```
@@ -15,6 +19,8 @@ mira luna_pinyin.test.yaml
 ```
 
 如果涉及多次部署，建議使用 `-C` / `--cache-dir` 參數緩存產物以加速測試流程。
+
+`-R` / `--regex` 可用來只運行名稱匹配正則表達式的部署。
 
 ## 格式
 
@@ -59,6 +65,30 @@ deploy:
       - send: a
         assert: eq(cand[1].text, "故意失敗")
 ```
+
+### 效能測量
+
+效能測量文件必須在頂層明確配置 `warmup` 和 `iterations`，兩者均無默認值。
+`warmup` 可以爲 0，`iterations` 必須大於 0。每個部署以 `benchmarks` 列出具名按鍵序列：
+
+```yaml
+schema: luna_pinyin
+source_dir: ..
+
+warmup: 1
+iterations: 1
+
+deploy:
+  default:
+    benchmarks:
+      - name: example
+        send: nihao{space}
+```
+
+輸出包含兩項測量，單位均爲毫秒（`ms`），不計入預熱輪次：
+
+- `per-key latency`：單次按鍵的耗時，包含發送按鍵及讀取結果。
+- `iteration key-time total`：每輪所有按鍵耗時之和，不包含部署及會話初始化等開銷。
 
 ## 注意事項
 

@@ -2,57 +2,123 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/rimeinn/mira/refs/heads/main/spec/mira.schema.json",
     "title": "Mira",
-    "description": "RIME 方案單元測試文檔",
-    "type": "object",
-    "properties": {
-        "schema": {
-            "type": "string",
-            "description": "被測試的方案名"
-        },
-        "source_dir": {
-            "type": "string",
-            "description": "方案源碼所在文件夾路徑"
-        },
-        "script": {
-            "type": "string",
-            "description": "在測試之前運行 Lua 腳本（所有測試共享）"
-        },
-        "deploy": {
+    "description": "RIME 方案測試及效能測量文檔",
+    "oneOf": [
+        { "$ref": "#/$defs/testDocument" },
+        { "$ref": "#/$defs/benchmarkDocument" }
+    ],
+    "$defs": {
+        "patch": {
             "type": "object",
-            "additionalProperties": {
-                "type": "object",
-                "properties": {
-                    "patch": {
-                        "type": "object",
-                        "additionalProperties": {}
-                    },
-                    "options": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "boolean"
-                        }
-                    },
-                    "tests": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "send": {
-                                    "type": "string",
-                                    "description": "向 Rime 發送的按鍵序列"
-                                },
-                                "assert": {
-                                    "type": "string",
-                                    "description": "布爾類型的 Lua 表達式"
-                                }
-                            },
-                            "required": ["send", "assert"]
-                        }
-                    }
+            "additionalProperties": {}
+        },
+        "options": {
+            "type": "object",
+            "additionalProperties": { "type": "boolean" }
+        },
+        "testDocument": {
+            "type": "object",
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "description": "被測試的方案名"
                 },
-                "required": ["tests"]
-            }
+                "source_dir": {
+                    "type": "string",
+                    "description": "方案源碼所在文件夾路徑"
+                },
+                "script": {
+                    "type": "string",
+                    "description": "在測試之前運行 Lua 腳本（所有測試共享）"
+                },
+                "deploy": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "patch": { "$ref": "#/$defs/patch" },
+                            "options": { "$ref": "#/$defs/options" },
+                            "tests": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "send": {
+                                            "type": "string",
+                                            "description": "向 Rime 發送的按鍵序列"
+                                        },
+                                        "assert": {
+                                            "type": "string",
+                                            "description": "布爾類型的 Lua 表達式"
+                                        }
+                                    },
+                                    "required": ["send", "assert"]
+                                }
+                            }
+                        },
+                        "required": ["tests"]
+                    }
+                }
+            },
+            "required": ["schema", "source_dir", "deploy"]
+        },
+        "benchmarkDocument": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "schema": {
+                    "type": "string",
+                    "description": "被測量的方案名"
+                },
+                "source_dir": {
+                    "type": "string",
+                    "description": "方案源碼所在文件夾路徑"
+                },
+                "warmup": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "每個 benchmark 的預熱輪數"
+                },
+                "iterations": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "每個 benchmark 的正式測量輪數"
+                },
+                "deploy": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "patch": { "$ref": "#/$defs/patch" },
+                            "options": { "$ref": "#/$defs/options" },
+                            "benchmarks": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "測量項目名稱"
+                                        },
+                                        "send": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "description": "向 Rime 發送的按鍵序列"
+                                        }
+                                    },
+                                    "required": ["name", "send"]
+                                }
+                            }
+                        },
+                        "required": ["benchmarks"]
+                    }
+                }
+            },
+            "required": ["schema", "source_dir", "deploy", "warmup", "iterations"]
         }
-    },
-    "required": ["schema", "source_dir", "deploy"]
+    }
 }
