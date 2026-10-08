@@ -18,6 +18,7 @@ using Duration = std::chrono::duration<double, std::milli>;
 
 struct Statistics {
     double mean;
+    double stddev;
     double p50;
     double p95;
     double p99;
@@ -201,8 +202,15 @@ calculate_statistics(const std::vector<double>& samples)
 {
     auto sorted = samples;
     std::sort(sorted.begin(), sorted.end());
+    const auto mean = std::accumulate(sorted.begin(), sorted.end(), 0.0) / sorted.size();
+    double squared_deviations = 0.0;
+    for (const auto sample : sorted) {
+        const auto deviation = sample - mean;
+        squared_deviations += deviation * deviation;
+    }
     return {
-        std::accumulate(sorted.begin(), sorted.end(), 0.0) / sorted.size(),
+        mean,
+        std::sqrt(squared_deviations / sorted.size()),
         nearest_rank(sorted, 0.50),
         nearest_rank(sorted, 0.95),
         nearest_rank(sorted, 0.99),
@@ -224,6 +232,7 @@ print_statistics(std::string_view label, const Statistics& stats)
     std::cout << std::fixed << std::setprecision(3)
               << "  " << label << " (ms):"
               << " mean=" << stats.mean
+              << " stddev=" << stats.stddev
               << " p50=" << stats.p50
               << " p95=" << stats.p95
               << " p99=" << stats.p99
